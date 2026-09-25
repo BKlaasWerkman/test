@@ -3,66 +3,80 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Snake</title>
+<title>LCD Snake</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&display=swap">
 <style>
+  /* One deliberate look: a monochrome phone LCD set in a dark olive handset. */
   :root {
-    --bg: #f4f1ea;
-    --panel: #ffffff;
-    --text: #1f2328;
-    --muted: #6b7078;
-    --grid: #ebe7dd;
-    --snake: #2f7d4f;
-    --snake-head: #1d5a37;
-    --food: #d9482b;
-    --accent: #2f7d4f;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #15171a;
-      --panel: #1f2226;
-      --text: #e8e6e3;
-      --muted: #9aa0a6;
-      --grid: #262a2f;
-      --snake: #4fbf7a;
-      --snake-head: #7fd9a0;
-      --food: #ff6b4a;
-      --accent: #4fbf7a;
-    }
+    color-scheme: dark;
+    --case: #262d22;
+    --case-edge: #3a4433;
+    --lcd: #c5d6a8;
+    --lcd-shade: #b9cb9b;
+    --pixel: #2c3822;
+    --pixel-soft: #5d6e4a;
+    --label: #dfe6cf;
+    --muted: #8f9c7d;
+    --key: #4b5842;
+    --key-edge: #1c2218;
+    --font: "VT323", ui-monospace, "Courier New", monospace;
   }
   * { box-sizing: border-box; }
+  html, body { height: 100%; }
   body {
     margin: 0;
-    min-height: 100vh;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 16px;
-    padding: 16px;
-    background: var(--bg);
-    color: var(--text);
-    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    gap: 14px;
+    padding-inline: 16px;
+    padding-block: 16px;
+    background: var(--case);
+    color: var(--label);
+    font-family: var(--font);
+    font-size: 20px;
   }
-  h1 { margin: 0; font-size: 1.75rem; letter-spacing: 0.02em; }
-  .hud {
-    display: flex;
-    gap: 24px;
-    font-variant-numeric: tabular-nums;
-    color: var(--muted);
+  h1 {
+    margin: 0;
+    font-size: 2.4rem;
+    font-weight: 400;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    text-wrap: balance;
   }
-  .hud strong { color: var(--text); }
   .board {
     position: relative;
     width: min(480px, 100%);
-    aspect-ratio: 1;
+    max-width: 100%;
+    padding: 14px;
+    border-radius: 18px;
+    background: var(--case-edge);
+    box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.06), 0 10px 30px rgba(0, 0, 0, 0.35);
+  }
+  .screen {
+    position: relative;
+    border-radius: 6px;
+    overflow: hidden;
+    background: var(--lcd);
+    box-shadow: inset 0 0 18px rgba(44, 56, 34, 0.35);
+  }
+  .hud {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 12px;
+    color: var(--pixel);
+    font-size: 1.3rem;
+    font-variant-numeric: tabular-nums;
+    border-bottom: 2px solid var(--pixel-soft);
   }
   canvas {
     width: 100%;
-    height: 100%;
+    max-width: 100%;
+    aspect-ratio: 1;
     display: block;
-    background: var(--panel);
-    border-radius: 12px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
     touch-action: none;
   }
   .overlay {
@@ -72,42 +86,50 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 12px;
+    gap: 10px;
+    padding: 16px;
     text-align: center;
-    border-radius: 12px;
-    background: color-mix(in srgb, var(--panel) 85%, transparent);
+    color: var(--pixel);
+    background: color-mix(in srgb, var(--lcd) 88%, transparent);
+    z-index: 2;
   }
   .overlay[hidden] { display: none; }
-  .overlay h2 { margin: 0; font-size: 1.5rem; }
-  .overlay p { margin: 0; color: var(--muted); }
+  .overlay h2 { margin: 0; font-size: 2.6rem; font-weight: 400; letter-spacing: 0.08em; }
+  .overlay p { margin: 0; font-size: 1.3rem; max-width: 26ch; }
   button {
     font: inherit;
-    font-weight: 600;
-    padding: 10px 22px;
+    font-size: 1.4rem;
+    letter-spacing: 0.08em;
+    padding: 6px 22px;
     border: 0;
-    border-radius: 8px;
-    background: var(--accent);
-    color: #fff;
+    border-radius: 999px;
+    background: var(--key);
+    color: var(--label);
+    box-shadow: 0 3px 0 var(--key-edge);
     cursor: pointer;
   }
-  .help { color: var(--muted); font-size: 0.9rem; text-align: center; }
+  button:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--key-edge); }
+  button:focus-visible { outline: 2px dashed var(--pixel); outline-offset: 4px; }
+  .help { margin: 0; color: var(--muted); font-size: 1.15rem; text-align: center; }
 </style>
 </head>
 <body>
   <h1>Snake</h1>
-  <div class="hud">
-    <span>Score: <strong id="score">0</strong></span>
-    <span>Best: <strong id="best">0</strong></span>
-  </div>
   <div class="board">
-    <canvas id="game" width="480" height="480"></canvas>
-    <div class="overlay" id="overlay">
-      <h2 id="overlay-title">Snake</h2>
-      <p id="overlay-text">Eat the food, don't hit the walls or yourself.</p>
-      <button id="start">Start</button>
+    <div class="screen">
+      <div class="hud">
+        <span>SCORE <strong id="score">0</strong></span>
+        <span>BEST <strong id="best">0</strong></span>
+      </div>
+      <canvas id="game" width="480" height="480"></canvas>
+      <div class="overlay" id="overlay">
+        <h2 id="overlay-title">SNAKE</h2>
+        <p id="overlay-text">Eat the food. Don't hit the walls or your own tail.</p>
+        <button id="start">Start</button>
+      </div>
     </div>
   </div>
-  <p class="help">Arrow keys / WASD to move · Space to pause · Swipe on touch screens</p>
+  <p class="help">Arrows or WASD to steer · Space to pause · Swipe on a phone</p>
 
 <script>
 (() => {
@@ -196,26 +218,36 @@
   }
 
   function draw() {
-    ctx.fillStyle = css('--panel');
+    const lcd = css('--lcd'), ghost = css('--lcd-shade'), ink = css('--pixel');
+    ctx.fillStyle = lcd;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    ctx.fillStyle = css('--grid');
+    // Unlit LCD cells, so the grid reads like a real segment display.
+    ctx.fillStyle = ghost;
     for (let y = 0; y < GRID; y++)
-      for (let x = (y % 2); x < GRID; x += 2)
-        ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
+      for (let x = 0; x < GRID; x++)
+        ctx.fillRect(x * CELL + 2, y * CELL + 2, CELL - 4, CELL - 4);
 
     if (food) {
-      ctx.fillStyle = css('--food');
+      const cx = food.x * CELL + CELL / 2, cy = food.y * CELL + CELL / 2, r = CELL * 0.36;
+      ctx.fillStyle = ink;
       ctx.beginPath();
-      ctx.arc(food.x * CELL + CELL / 2, food.y * CELL + CELL / 2, CELL * 0.38, 0, Math.PI * 2);
+      ctx.moveTo(cx, cy - r); ctx.lineTo(cx + r, cy); ctx.lineTo(cx, cy + r); ctx.lineTo(cx - r, cy);
       ctx.fill();
     }
 
     snake.forEach((s, i) => {
-      ctx.fillStyle = i === 0 ? css('--snake-head') : css('--snake');
-      ctx.beginPath();
-      ctx.roundRect(s.x * CELL + 1, s.y * CELL + 1, CELL - 2, CELL - 2, 6);
-      ctx.fill();
+      ctx.fillStyle = ink;
+      ctx.fillRect(s.x * CELL + 2, s.y * CELL + 2, CELL - 4, CELL - 4);
+      if (i === 0) {
+        // Two eyes, facing the direction of travel.
+        ctx.fillStyle = lcd;
+        const cx = s.x * CELL + CELL / 2 + dir.x * CELL * 0.18;
+        const cy = s.y * CELL + CELL / 2 + dir.y * CELL * 0.18;
+        const ox = dir.y * CELL * 0.2, oy = dir.x * CELL * 0.2, e = 3;
+        ctx.fillRect(cx + ox - e / 2, cy + oy - e / 2, e, e);
+        ctx.fillRect(cx - ox - e / 2, cy - oy - e / 2, e, e);
+      }
     });
   }
 
